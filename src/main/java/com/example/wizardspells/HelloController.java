@@ -16,6 +16,9 @@ import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.text.Font;
 import javafx.scene.shape.Path;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Stack;
 
 
@@ -105,10 +108,29 @@ public class HelloController {
 
         // Quand la souris est relâchée, on ne dessine plus
         canvas.setOnMouseReleased(new EventHandler<MouseEvent>() {
+            // TODO : régler le problème du dernier point enregistré lors du passage du mode trait à main levé
             @Override
             public void handle(MouseEvent mouseEvent) {
                 dessiner = false;
                 canvas.requestFocus();
+
+                List<Point2D> pointsPolTraites=douglasPeucker(lisserStackPoint(pointsPol), precisionSlider.getValue()*50);
+                System.out.println("oui");
+                reconnaissanceBasique(pointsPolTraites);
+                System.out.println("non");
+
+
+                /*Affichage de la pile de points a la in du tracage
+                System.out.println(precisionSlider.getValue());
+                while (!(pointsPol.empty())) {
+                    Point2D pointAffiche=pointsPol.pop();
+                    System.out.print("X : ");
+                    System.out.print(pointAffiche.getX());
+                    System.out.print(" Y : ");
+                    System.out.println(pointAffiche.getY());
+
+                } System.out.println("\n");*/
+
             }
         });
     }
@@ -124,13 +146,13 @@ public class HelloController {
         pointsPol.push(new Point2D(actX,actY));
     }
 
-    Stack<Point2D> lisserStackPoint(Stack<Point2D> stack){
+    List<Point2D> lisserStackPoint(Stack<Point2D> stack){
         //réduit le nombre de point en épurant les points trop proche
 
         //ajout du premier point dans la nouvelle stack
-        Stack<Point2D> retour = new Stack<Point2D>();
+        List<Point2D> retour = new ArrayList<Point2D>();
         Point2D pointReference = stack.pop();
-        retour.push(pointReference);
+        retour.add(pointReference);
 
         Point2D pointCourant;
         while(!stack.isEmpty()){
@@ -139,14 +161,80 @@ public class HelloController {
             //TODO faire un curseur pour choisir l'approximation
             if(Math.abs(pointCourant.getX()-pointReference.getX())>precisionSlider.getValue() && Math.abs(pointCourant.getY()-pointReference.getY())>precisionSlider.getValue()){
                 //ajoute le point courant dans la stack a retourner
-                retour.push(pointCourant);
+                retour.add(pointCourant);
                 //change le point de référence
                 pointReference = pointCourant;
             }
-            retour.push(pointCourant);
+            retour.add(pointCourant);
         }
 
         return retour;
+    }
+
+
+    public static List<Point2D> douglasPeucker(List<Point2D> points, double epsilon) {
+        if (points.size()<3) {;
+            return points; }
+
+        double maxDist = 0;
+        int index= 0;
+        Point2D start = points.get(0);
+        Point2D end = points.get(points.size()-1);
+
+        for (int i=1; i<points.size();i++) {
+            double dist = perpendicularDistance(points.get(i), start, end);
+            if (dist > maxDist) {
+                index=1;
+                maxDist=dist;
+            }
+        }
+        if (maxDist > epsilon) {
+            List<Point2D> result1=douglasPeucker(points.subList(0,index+1),epsilon);
+            List<Point2D> result2=douglasPeucker(points.subList(index, points.size()),epsilon);
+
+            List<Point2D> finalResult = new ArrayList<>(result1);
+            finalResult.remove(finalResult.size()-1); //évite les doublons
+            finalResult.addAll(result2);
+            return finalResult;}
+
+        else {
+            return List.of(start,end);
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+    private static double perpendicularDistance(Point2D pt, Point2D lineStart, Point2D lineEnd) {
+        double dx = lineEnd.getX() - lineStart.getX();
+        double dy = lineEnd.getY() - lineStart.getY();
+
+        if (dx == 0 && dy == 0) {
+            return pt.distance(lineStart);
+        }
+
+        double num=Math.abs(dy*pt.getX() - dx*pt.getY() + lineEnd.getX()*lineStart.getY() - lineEnd.getY()*lineStart.getX());
+        double denum=Math.sqrt(dx*dx+dy*dy);
+        return num/denum;
+
+    }
+
+    public void reconnaissanceBasique(List<Point2D> points) {
+        for (Point2D p : points) {
+            //TODO faire la reconnaissance (dire si c'est un carre, triangle...)
+            System.out.print("X : ");
+            System.out.print(p.getX());
+            System.out.print(" Y : ");
+            System.out.println(p.getY());
+
+        }
     }
 }
 
